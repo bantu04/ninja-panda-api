@@ -60,6 +60,16 @@ app.use('/api/auth', createAuthRouter(db));
 app.use('/api/captcha', captchaLimiter, createCaptchaRouter(db));
 app.use('/api/payments', createCreditsRouter(db));
 
+// ── Razorpay public key (safe to expose) ──
+app.get('/api/payments/razorpay-key', (req, res) => {
+  res.json({ key: process.env.RAZORPAY_KEY_ID || '' });
+});
+
+// ── Payment Page ──
+app.get('/pay', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'pay.html'));
+});
+
 // ── Health Check ──
 app.get('/api/health', (req, res) => {
   res.json({

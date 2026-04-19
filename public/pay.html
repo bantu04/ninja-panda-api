@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ninja Panda — Complete Payment</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0a0a0f;
+      color: #f0f0f5;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .payment-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 48px 40px;
+      max-width: 440px;
+      width: 90%;
+      text-align: center;
+    }
+    .brand-icon { font-size: 48px; margin-bottom: 16px; display: block; }
+    h1 { font-size: 24px; font-weight: 800; margin-bottom: 8px; }
+    .subtitle { color: rgba(240,240,245,0.6); font-size: 14px; margin-bottom: 32px; }
+    .amount-display {
+      background: linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(139,92,246,0.08) 100%);
+      border: 1px solid rgba(99,102,241,0.3);
+      border-radius: 14px;
+      padding: 24px;
+      margin-bottom: 32px;
+    }
+    .amount-number {
+      font-size: 40px;
+      font-weight: 900;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .amount-label { font-size: 14px; color: rgba(240,240,245,0.5); margin-top: 4px; }
+    .btn-pay {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-family: 'Inter', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+    }
+    .btn-pay:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(99,102,241,0.5); }
+    .btn-pay:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .status { margin-top: 16px; font-size: 13px; color: rgba(240,240,245,0.5); }
+    .status.success { color: #4ade80; }
+    .status.error { color: #f87171; }
+    .secure-note { margin-top: 24px; font-size: 11px; color: rgba(240,240,245,0.3); }
+  </style>
+</head>
+<body>
+  <div class="payment-card">
+    <span class="brand-icon">🐼</span>
+    <h1>Ninja Panda</h1>
+    <p class="subtitle">Complete your credit purchase</p>
+    
+    <div class="amount-display">
+      <div class="amount-number" id="credits-display">—</div>
+      <div class="amount-label">Credits</div>
+    </div>
+
+    <button class="btn-pay" id="pay-btn" disabled>Loading...</button>
+    <p class="status" id="status"></p>
+    <p class="secure-note">🔒 Secured by Razorpay. Your payment details are encrypted.</p>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const orderId = params.get('orderId');
+    const credits = params.get('credits');
+    const userId = params.get('userId');
+
+    const PACKAGES = {
+      '100': { price: 399, label: '100' },
+      '500': { price: 1599, label: '500' },
+      '1000': { price: 2799, label: '1000' },
+    };
+
+    const pkg = PACKAGES[credits];
+    if (!pkg || !orderId) {
+      document.getElementById('status').textContent = 'Invalid payment link.';
+      document.getElementById('status').className = 'status error';
+    } else {
+      document.getElementById('credits-display').textContent = pkg.label;
+      const btn = document.getElementById('pay-btn');
+      btn.textContent = `Pay ₹${pkg.price}`;
+      btn.disabled = false;
+
+      btn.addEventListener('click', () => {
+        btn.disabled = true;
+        btn.textContent = 'Processing...';
+
+        const options = {
+          key: '', // Will be injected by server
+          amount: pkg.price * 100,
+          currency: 'INR',
+          name: 'Ninja Panda',
+          description: `${pkg.label} Credits`,
+          order_id: orderId,
+          prefill: {},
+          theme: { color: '#6366f1' },
+          handler: async function (response) {
+            document.getElementById('status').textContent = 'Verifying payment...';
+            document.getElementById('status').className = 'status';
+
+            try {
+              const verifyRes = await fetch('/api/payments/verify-payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                }),
+              });
+
+              const data = await verifyRes.json();
+              if (data.success) {
+                document.getElementById('status').textContent = `✅ ${data.message} You can close this tab.`;
+                document.getElementById('status').className = 'status success';
+                btn.textContent = '✓ Payment Complete';
+              } else {
+                document.getElementById('status').textContent = '❌ ' + (data.error || 'Verification failed');
+                document.getElementById('status').className = 'status error';
+                btn.textContent = 'Try Again';
+                btn.disabled = false;
+              }
+            } catch (err) {
+              document.getElementById('status').textContent = '❌ Network error. Credits will be added via webhook.';
+              document.getElementById('status').className = 'status error';
+            }
+          },
+          modal: {
+            ondismiss: function () {
+              btn.disabled = false;
+              btn.textContent = `Pay ₹${pkg.price}`;
+              document.getElementById('status').textContent = 'Payment cancelled.';
+            },
+          },
+        };
+
+        // Fetch Razorpay key from server
+        fetch('/api/payments/razorpay-key')
+          .then(r => r.json())
+          .then(data => {
+            options.key = data.key;
+            const rzp = new Razorpay(options);
+            rzp.open();
+          })
+          .catch(() => {
+            document.getElementById('status').textContent = '❌ Could not initialize payment.';
+            document.getElementById('status').className = 'status error';
+            btn.disabled = false;
+            btn.textContent = `Pay ₹${pkg.price}`;
+          });
+      });
+    }
+  </script>
+</body>
+</html>

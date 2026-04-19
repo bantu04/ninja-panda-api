@@ -17,6 +17,7 @@
     "express-rate-limit": "^7.1.5",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
+    "razorpay": "^2.9.6",
     "stripe": "^14.0.0",
     "tesseract.js": "^7.0.0"
   }
