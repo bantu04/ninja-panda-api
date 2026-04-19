@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Environment variables (API keys, secrets)
+.env
+.env.local
+.env.production
+
+# Database
+db/*.db
+db/*.db-shm
+db/*.db-wal
+
+# Tesseract training data (downloaded at runtime)
+*.traineddata
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
