@@ -30,18 +30,10 @@ function createCreditsRouter(db) {
         return res.status(400).json({ error: 'Invalid credit package' });
       }
 
+      // Stripe MUST be configured for real purchases
       if (!process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY.includes('your-stripe')) {
-        // Stripe not configured — add credits directly for dev/testing
-        db.prepare('UPDATE users SET credits = credits + ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
-          .run(credits, req.userId);
-        db.prepare(
-          'INSERT INTO transactions (user_id, type, credits, amount_usd, status) VALUES (?, ?, ?, ?, ?)'
-        ).run(req.userId, 'purchase', credits, pkg.price / 100, 'completed');
-
-        const updated = db.prepare('SELECT credits FROM users WHERE id = ?').get(req.userId);
-        return res.json({
-          message: `DEV MODE: ${credits} credits added directly`,
-          credits: updated.credits,
+        return res.status(503).json({ 
+          error: 'Payment system is being set up. Please try again later.' 
         });
       }
 
@@ -54,15 +46,15 @@ function createCreditsRouter(db) {
           {
             price_data: {
               currency: 'usd',
-              product_data: { name: `Assessra - ${pkg.label}` },
+              product_data: { name: `Ninja Panda - ${pkg.label}` },
               unit_amount: pkg.price,
             },
             quantity: 1,
           },
         ],
         mode: 'payment',
-        success_url: process.env.STRIPE_SUCCESS_URL || 'https://assessra.com/success',
-        cancel_url: process.env.STRIPE_CANCEL_URL || 'https://assessra.com/cancel',
+        success_url: process.env.STRIPE_SUCCESS_URL || 'https://ninja-panda-api.onrender.com/success',
+        cancel_url: process.env.STRIPE_CANCEL_URL || 'https://ninja-panda-api.onrender.com/cancel',
         customer_email: user.email,
         metadata: { userId: req.userId.toString(), credits: credits.toString() },
       });
