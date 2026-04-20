@@ -108,7 +108,7 @@ function createCaptchaRouter(db) {
           }
           const startTime = Date.now();
           const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-          const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite' });
+          const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
           const result = await model.generateContent([
             'Look at this image. It contains a short string of distorted letters and numbers (usually 4-8 characters). Output ONLY those characters. No other text whatsoever. Example output: xK7m2p',
