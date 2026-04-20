@@ -70,6 +70,8 @@ function createCaptchaRouter(db) {
 
       let captchaText = null;
       let solvedBy = null;
+      let tesseractErrorMessage = '';
+      let geminiErrorMessage = '';
 
       // ══════════════════════════════════════
       // TIER 1: Tesseract.js (local, instant)
@@ -95,6 +97,7 @@ function createCaptchaRouter(db) {
           console.log(`[CAPTCHA] Tesseract result rejected. Falling back to Gemini...`);
         }
       } catch (tessErr) {
+        tesseractErrorMessage = tessErr.message;
         console.log(`[CAPTCHA] Tesseract error: ${tessErr.message}. Falling back to Gemini...`);
       }
 
@@ -134,10 +137,12 @@ function createCaptchaRouter(db) {
             captchaText = geminiText;
             solvedBy = `gemini (${elapsed}ms)`;
           } else {
-            console.log(`[CAPTCHA] Gemini response rejected as garbage.`);
+            geminiErrorMessage = `Garbage output: ${geminiText}`;
+            console.log(`[CAPTCHA] Gemini response rejected as garbage. Raw output: "${geminiText}"`);
           }
         } catch (geminiErr) {
-          console.log(`[CAPTCHA] Gemini error: ${geminiErr.message}`);
+          geminiErrorMessage = geminiErr.message;
+          console.error(`[CAPTCHA] Gemini error details:`, geminiErr);
         }
       }
 
@@ -146,7 +151,7 @@ function createCaptchaRouter(db) {
       // ══════════════════════════════════════
       if (!captchaText) {
         return res.status(500).json({ 
-          error: 'All solvers failed. The captcha image may be blank or unreadable. Please try again.' 
+          error: `All solvers failed. Gemini Error: ${geminiErrorMessage || 'Unknown'}. Tesseract Error: ${tesseractErrorMessage || 'Unknown'}` 
         });
       }
 
